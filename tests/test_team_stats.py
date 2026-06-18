@@ -36,9 +36,9 @@ class TestTeamStats(unittest.TestCase):
         self.assertEqual(s["Mexico"]["group_winner"], 0)
         self.assertEqual(s["_warnings"], [])  # no premature tie warnings either
 
-    def test_group_winner_when_group_complete(self):
-        # full round-robin of group A (each team plays 3); Mexico wins all
-        matches = [
+    def test_group_milestones_wait_for_whole_group_stage(self):
+        # group A fully played but group B not started -> award nothing yet
+        a_done = [
             m("group", "Mexico", "South Africa", 3, 0),
             m("group", "Korea Rep.", "Czechia", 0, 0),
             m("group", "Mexico", "Korea Rep.", 2, 0),
@@ -46,9 +46,55 @@ class TestTeamStats(unittest.TestCase):
             m("group", "South Africa", "Korea Rep.", 1, 0),
             m("group", "South Africa", "Czechia", 1, 0),
         ]
-        s = team_stats(matches, ROSTER)
-        self.assertEqual(s["Mexico"]["group_winner"], 1)
-        self.assertEqual(s["South Africa"]["group_winner"], 0)
+        s = team_stats(a_done, ROSTER)
+        self.assertEqual(s["Mexico"]["group_winner"], 0)   # group B unfinished
+        self.assertEqual(s["Mexico"]["qualify"], 0)
+
+    def test_group_winner_and_qualify_when_stage_complete(self):
+        # 12 complete groups. Per group: t0 wins all, t1 wins two, t2 beats t3,
+        # t3 loses all. t2's winning margin grows with i to order the 12 thirds.
+        roster = {chr(65 + i): [f"G{i}T{j}" for j in range(4)] for i in range(12)}
+        matches = []
+        for i in range(12):
+            t0, t1, t2, t3 = roster[chr(65 + i)]
+            matches += [
+                m("group", t0, t1, 1, 0), m("group", t0, t2, 1, 0), m("group", t0, t3, 1, 0),
+                m("group", t1, t2, 1, 0), m("group", t1, t3, 1, 0),
+                m("group", t2, t3, 1 + i, 0),
+            ]
+        s = team_stats(matches, roster)
+        self.assertEqual(s["G5T0"]["group_winner"], 1)     # winner of each group
+        self.assertEqual(s["G5T1"]["group_winner"], 0)
+        self.assertEqual(s["G5T0"]["qualify"], 1)          # top two of each group qualify
+        self.assertEqual(s["G5T1"]["qualify"], 1)
+        self.assertEqual(s["G5T3"]["qualify"], 0)          # 4th never qualifies
+        # 8 best thirds qualify: highest margins (i=4..11) in, i=0..3 out
+        self.assertEqual(s["G11T2"]["qualify"], 1)
+        self.assertEqual(s["G0T2"]["qualify"], 0)
+        self.assertEqual(s["_warnings"], [])
+
+    def test_knockout_run_accumulates_milestones(self):
+        roster = {"A": ["X", "Y", "Z", "W"], "B": ["V", "U", "P", "Q"]}
+        matches = [
+            m("r32", "X", "Y", 1, 0),                                  # X & Y qualify
+            m("r16", "X", "Z", 2, 1),                                  # advance; no r16 milestone
+            m("qf", "X", "W", 1, 0),                                   # X & W make QF
+            m("sf", "X", "V", 1, 1, penalties=True, winner="X"),       # draw both; X advances
+            m("final", "X", "U", 2, 0),                                # X & U make final; X champion
+        ]
+        s = team_stats(matches, roster)
+        x = s["X"]
+        self.assertEqual((x["qualify"], x["qf"], x["sf"], x["final"], x["winner"]), (1, 1, 1, 1, 1))
+        self.assertEqual(x["win"], 4)            # R32, R16, QF, Final (SF was a shootout = draw)
+        self.assertEqual(x["draw"], 1)           # SF shootout
+        self.assertEqual(s["Y"]["qualify"], 1)   # R32 loser still qualified
+        self.assertEqual(s["U"]["final"], 1)
+        self.assertEqual(s["U"]["winner"], 0)    # runner-up is not champion
+        self.assertEqual(s["Z"]["qf"], 0)        # lost in R16, never made QF
+
+    def test_unclassified_completed_match_warns(self):
+        s = team_stats([m("other", "Mexico", "Canada", 1, 0)], ROSTER)
+        self.assertTrue(any("Mexico" in w and "Canada" in w for w in s["_warnings"]))
 
     def test_penalty_knockout_is_draw_for_both_winner_advances(self):
         matches = [m("r32", "Mexico", "Canada", 1, 1, penalties=True, winner="Mexico")]

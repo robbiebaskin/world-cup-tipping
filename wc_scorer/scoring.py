@@ -25,6 +25,7 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
     teams_all = [t for ts in roster.values() for t in ts]
     stats = {t: empty_stats() for t in teams_all}
     table = {t: {"pts": 0, "gd": 0, "gf": 0, "gp": 0} for t in teams_all}  # group standings
+    warnings = []
 
     for mt in matches:
         if not mt["completed"]:
@@ -32,6 +33,10 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
         a, b = mt["team_a"], mt["team_b"]
         if a not in stats or b not in stats:
             continue
+        if mt["stage"] == "other":
+            # Stage couldn't be classified — surface it loudly rather than silently
+            # dropping any milestone (e.g. if ESPN renames a knockout slug).
+            warnings.append(f"unclassified stage for completed match: {a} vs {b}")
         ga, gb = mt["ga"], mt["gb"]
         stats[a]["gf"] += ga; stats[a]["ga"] += gb
         stats[b]["gf"] += gb; stats[b]["ga"] += ga
@@ -65,28 +70,35 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
             else:
                 table[win]["pts"] += 3
 
-    warnings = []
     forced = overrides.get("force_group_winner", {})
-    for g, ts in roster.items():
-        if g in forced:
-            for t in ts:
-                stats[t]["group_winner"] = 1 if t == forced[g] else 0
-            continue
-        # Only decide a winner once the group is COMPLETE (every team has played
-        # all its group games). Mid-stage standings are not yet a group winner —
-        # the workbook awards nothing until the group finishes. tie -> warn, no award.
-        complete = all(table[t]["gp"] >= len(ts) - 1 for t in ts)
-        if not complete:
-            continue
-        ranked = sorted(ts, key=lambda t: (table[t]["pts"], table[t]["gd"], table[t]["gf"]),
-                        reverse=True)
-        top, second = ranked[0], ranked[1]
-        tie = (table[top]["pts"], table[top]["gd"], table[top]["gf"]) == \
-              (table[second]["pts"], table[second]["gd"], table[second]["gf"])
-        if tie:
-            warnings.append(f"group {g}: tie for winner between {top} and {second}")
-        else:
-            stats[top]["group_winner"] = 1
+    # Manual group-winner overrides apply immediately.
+    for g, winner in forced.items():
+        for t in roster.get(g, []):
+            stats[t]["group_winner"] = 1 if t == winner else 0
+
+    # Group winner and qualify are awarded only once the ENTIRE group stage is
+    # complete (every team has played all its group games) — never to a mid-stage
+    # leader, and qualify needs the cross-group best-third ranking. (R32 appearance
+    # below also credits qualify, as a ground-truth reinforcement once drawn.)
+    stage_done = all(all(table[t]["gp"] >= len(ts) - 1 for t in ts) for ts in roster.values())
+    if stage_done:
+        key = lambda t: (table[t]["pts"], table[t]["gd"], table[t]["gf"])
+        thirds = []
+        for g, ts in roster.items():
+            ranked = sorted(ts, key=key, reverse=True)
+            for t in ranked[:2]:                      # top two of each group qualify
+                stats[t]["qualify"] = 1
+            thirds.append(ranked[2])
+            if g not in forced:
+                if key(ranked[0]) == key(ranked[1]):
+                    warnings.append(f"group {g}: tie for winner between {ranked[0]} and {ranked[1]}")
+                else:
+                    stats[ranked[0]]["group_winner"] = 1
+        thirds.sort(key=key, reverse=True)            # 8 best third-placed teams qualify
+        for t in thirds[:8]:
+            stats[t]["qualify"] = 1
+        if len(thirds) > 8 and key(thirds[7]) == key(thirds[8]):
+            warnings.append(f"best-third qualify cutoff tie (verify): {thirds[7]} vs {thirds[8]}")
 
     for team, patch in overrides.get("patch", {}).items():
         if team in stats:
