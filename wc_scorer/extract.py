@@ -63,3 +63,34 @@ def extract_entrants(entries_cells: dict, roster: dict) -> list:
         if not found:
             break
     return entrants
+
+
+import unicodedata
+
+# ESPN names for not-yet-played knockout fixtures, not real teams.
+_PLACEHOLDER_RE = re.compile(r"(\d+(st|nd|rd|th)?\s+place|winner|runner|loser|"
+                             r"group [a-l]\b.*place|match \d+)", re.I)
+
+
+def norm(s: str) -> str:
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def build_name_map(roster: dict, espn_names, manual_aliases: dict = None):
+    manual_aliases = manual_aliases or {}
+    canon = [t for ts in roster.values() for t in ts]
+    by_norm = {norm(t): t for t in canon}
+    name_map, exceptions = {}, []
+    for name in sorted(espn_names):
+        if _PLACEHOLDER_RE.search(name):
+            continue
+        if name in canon:
+            name_map[name] = name
+        elif name in manual_aliases:
+            name_map[name] = manual_aliases[name]
+        elif norm(name) in by_norm:
+            name_map[name] = by_norm[norm(name)]
+        else:
+            exceptions.append(name)
+    return name_map, exceptions
