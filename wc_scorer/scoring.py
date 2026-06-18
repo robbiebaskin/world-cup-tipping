@@ -99,3 +99,23 @@ WEIGHTS = {
 
 def team_points(stats: dict) -> int:
     return sum(WEIGHTS[k] * stats.get(k, 0) for k in WEIGHTS)
+
+
+def score_entrant(entrant: dict, stats_map: dict) -> dict:
+    by_country = {}
+    total = 0
+    for team, mult in entrant["multipliers"].items():
+        if mult <= 0:
+            continue
+        stats = stats_map.get(team) or empty_stats()
+        components = {k: mult * WEIGHTS[k] * stats.get(k, 0)
+                      for k in WEIGHTS if stats.get(k, 0)}
+        points = mult * team_points(stats)
+        by_country[team] = {"multiplier": mult, "components": components, "points": points}
+        total += points
+    return {"name": entrant["name"], "star": entrant["starred_team"],
+            "total": total, "by_country": by_country}
+
+
+def score_all(entrants: list, stats_map: dict) -> list:
+    return [score_entrant(e, stats_map) for e in entrants]
