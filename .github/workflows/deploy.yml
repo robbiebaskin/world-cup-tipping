@@ -39,6 +39,8 @@ jobs:
         run: python3 -m wc_scorer export --refresh
 
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true   # let the workflow turn on Pages (Actions source) itself
 
       - uses: actions/upload-pages-artifact@v3
         with:
