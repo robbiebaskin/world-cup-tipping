@@ -10,8 +10,6 @@ import zipfile
 import re
 import html
 
-_NS_R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
-
 
 def col_to_num(col: str) -> int:
     n = 0
@@ -34,7 +32,7 @@ def _shared_strings(z: zipfile.ZipFile) -> list:
     except KeyError:
         return []
     out = []
-    for si in re.findall(r"<si>(.*?)</si>", xml, re.S):
+    for si in re.findall(r"<si[^>]*>(.*?)</si>", xml, re.S):
         out.append(html.unescape("".join(re.findall(r"<t[^>]*>(.*?)</t>", si, re.S))))
     return out
 
@@ -52,9 +50,9 @@ def _sheet_path(z: zipfile.ZipFile, sheet_name: str) -> str:
 
 
 def read_sheet(xlsx_path: str, sheet_name: str) -> dict:
-    z = zipfile.ZipFile(xlsx_path)
-    ss = _shared_strings(z)
-    xml = z.read(_sheet_path(z, sheet_name)).decode("utf-8", "replace")
+    with zipfile.ZipFile(xlsx_path) as z:
+        ss = _shared_strings(z)
+        xml = z.read(_sheet_path(z, sheet_name)).decode("utf-8", "replace")
     cells = {}
     for c in re.finditer(r"<c\b([^>]*?)(?:/>|>(.*?)</c>)", xml, re.S):
         attrs, body = c.group(1), c.group(2)
@@ -77,6 +75,6 @@ def read_sheet(xlsx_path: str, sheet_name: str) -> dict:
     return cells
 
 
-def cell(cells: dict, col: str, row: int):
+def cell(cells: dict, col: str, row: int) -> "str | None":
     c = cells.get(f"{col}{row}")
     return c["value"] if c else None
