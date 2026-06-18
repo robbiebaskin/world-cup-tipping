@@ -89,3 +89,13 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
 
     stats["_warnings"] = warnings
     return stats
+
+
+WEIGHTS = {
+    "win": 5, "draw": 3, "loss": 0, "gf": 2, "ga": -1, "yellow": -1, "red": -5,
+    "group_winner": 5, "qualify": 2, "qf": 10, "sf": 15, "final": 20, "winner": 30,
+}
+
+
+def team_points(stats: dict) -> int:
+    return sum(WEIGHTS[k] * stats.get(k, 0) for k in WEIGHTS)
