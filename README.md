@@ -54,8 +54,8 @@ cadence) on `wc_scorer refresh`.
 ## Deploy online (GitHub Pages — free)
 
 `.github/workflows/deploy.yml` rebuilds `web/data.json` from live results and
-publishes `web/` to GitHub Pages on every push, manually, and every ~10 minutes
-on a schedule. CI does the refresh itself (the scorer needs only the committed
+publishes `web/` to GitHub Pages on every push, manually, and every ~5 minutes
+on a schedule (best-effort — GitHub often delays high-frequency schedules). CI does the refresh itself (the scorer needs only the committed
 `data/reference/*.json` + the public ESPN feed), so nothing has to run on your
 machine. One-time setup:
 
