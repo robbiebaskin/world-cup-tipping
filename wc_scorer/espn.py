@@ -2,9 +2,12 @@
 """Fetch and parse the unofficial ESPN FIFA World Cup scoreboard feed."""
 import json
 import os
+import re as _re
 import subprocess
 import urllib.error
 import urllib.request
+
+from .teams import to_canonical
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
 DEFAULT_DATES = "20260611-20260719"
@@ -46,10 +49,6 @@ def team_names(raw: dict) -> set[str]:
                 if dn:
                     names.add(dn)
     return names
-
-
-import re as _re
-from .teams import to_canonical
 
 
 def stage_of(event: dict) -> str:

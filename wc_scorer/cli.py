@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import sys
 
 from . import espn, extract, rankings, report, scoring, teams
 
@@ -18,14 +19,13 @@ def compute(ref_dir, dates, refresh, cache_dir, overrides_path):
             overrides = json.load(f)
     stats = scoring.team_stats(matches, roster, overrides=overrides)
     warnings = stats.pop("_warnings", [])
-    for w in warnings:
-        print(f"WARNING: {w}")
-    return scoring.score_all(entrants, stats)
+    results = scoring.score_all(entrants, stats)
+    return results, warnings
 
 
 def run_extract(args) -> int:
     names = espn.team_names(espn.fetch(args.dates or espn.DEFAULT_DATES,
-                                       cache_dir=args.cache))
+                                       cache_dir=args.cache, refresh=args.refresh))
     summary = extract.extract(args.rankings, out_dir=args.out, espn_names=names,
                               now=args.now)
     print(f"Extracted: {summary['entrants']} entrants, {summary['roster']} teams, "
@@ -37,7 +37,9 @@ def run_extract(args) -> int:
 
 
 def run_score(args) -> int:
-    results = compute(args.ref, args.dates, args.refresh, args.cache, args.overrides)
+    results, warnings = compute(args.ref, args.dates, args.refresh, args.cache, args.overrides)
+    for w in warnings:
+        print(f"WARNING: {w}", file=sys.stderr)
     tg = teams.team_group(teams.load_roster(args.ref))
     fmts = args.format.split(",")
     if "console" in fmts:
@@ -61,6 +63,7 @@ def main(argv=None) -> int:
     pe.add_argument("--cache", default="data/cache")
     pe.add_argument("--dates", default=None)
     pe.add_argument("--now", default="")
+    pe.add_argument("--refresh", action="store_true")
     pe.set_defaults(func=run_extract)
 
     ps = sub.add_parser("score", help="score the competition from the live feed")

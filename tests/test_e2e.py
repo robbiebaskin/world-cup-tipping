@@ -4,9 +4,9 @@ from wc_scorer import cli
 
 class TestEndToEnd(unittest.TestCase):
     def test_compute_against_real_data(self):
-        results = cli.compute(ref_dir="data/reference", dates=None,
-                              refresh=False, cache_dir="data/cache",
-                              overrides_path=None)
+        results, warnings = cli.compute(ref_dir="data/reference", dates=None,
+                                        refresh=False, cache_dir="data/cache",
+                                        overrides_path=None)
         self.assertEqual(len(results), 63)
         for r in results:
             self.assertIsInstance(r["total"], int)

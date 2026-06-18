@@ -77,7 +77,7 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
         tie = (table[top]["pts"], table[top]["gd"], table[top]["gf"]) == \
               (table[second]["pts"], table[second]["gd"], table[second]["gf"])
         # only award once the group has actually played; tie -> warn, no award
-        played = any(table[t]["pts"] or stats[t]["gf"] or stats[t]["ga"] for t in ts)
+        played = any(table[t]["pts"] or table[t]["gd"] or table[t]["gf"] for t in ts)
         if played and not tie:
             stats[top]["group_winner"] = 1
         elif played and tie:
@@ -108,8 +108,7 @@ def score_entrant(entrant: dict, stats_map: dict) -> dict:
         if mult <= 0:
             continue
         stats = stats_map.get(team) or empty_stats()
-        components = {k: mult * WEIGHTS[k] * stats.get(k, 0)
-                      for k in WEIGHTS if stats.get(k, 0)}
+        components = {k: v for k in WEIGHTS if (v := mult * WEIGHTS[k] * stats.get(k, 0))}
         points = mult * team_points(stats)
         by_country[team] = {"multiplier": mult, "components": components, "points": points}
         total += points
