@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+import urllib.error
 import urllib.request
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
@@ -17,7 +18,9 @@ def _http_get(url: str) -> bytes:
     try:
         with urllib.request.urlopen(url, timeout=30) as r:
             return r.read()
-    except Exception:
+    except urllib.error.HTTPError:
+        raise
+    except urllib.error.URLError:
         # macOS Homebrew Python can lack CA certs; curl is verified to work here.
         return subprocess.check_output(["curl", "-s", url], timeout=30)
 
@@ -34,7 +37,7 @@ def fetch(dates: str = DEFAULT_DATES, cache_dir: str = "data/cache",
         return json.load(f)
 
 
-def team_names(raw: dict) -> set:
+def team_names(raw: dict) -> set[str]:
     names = set()
     for event in raw.get("events", []):
         for comp in event.get("competitions", []):
