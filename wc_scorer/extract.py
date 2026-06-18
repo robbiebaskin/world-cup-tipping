@@ -96,3 +96,58 @@ def build_name_map(roster: dict, espn_names, manual_aliases: dict = None):
         else:
             exceptions.append(name)
     return name_map, exceptions
+
+
+import json
+import os
+from .xlsx_reader import read_sheet
+
+MANUAL_ALIASES = {
+    "South Korea": "Korea Rep.",
+    "Türkiye": "Turkey",
+    "United States": "USA",
+    "Congo DR": "Congo",
+    "Bosnia-Herzegovina": "Bosnia",
+    "Uzbekistan": "Uzebekistan",
+}
+
+
+def _meta(source: str, now: str) -> dict:
+    return {"source": source, "extracted_at": now}
+
+
+def _write(path: str, obj: dict):
+    with open(path, "w") as f:
+        json.dump(obj, f, indent=2, ensure_ascii=False)
+
+
+def extract(xlsx_path: str, out_dir: str = "data/reference",
+            espn_names=None, now: str = "") -> dict:
+    os.makedirs(out_dir, exist_ok=True)
+    roster = extract_roster(read_sheet(xlsx_path, "Results"))
+    entrants = extract_entrants(read_sheet(xlsx_path, "Entries"), roster)
+
+    flat = [t for ts in roster.values() for t in ts]
+    if len(roster) != 12 or len(flat) != 48 or len(set(flat)) != 48:
+        raise ValueError(f"roster invariant failed: {len(roster)} groups, {len(flat)} teams")
+    if len(entrants) != 63:
+        raise ValueError(f"expected 63 entrants, got {len(entrants)}")
+    for e in entrants:
+        if len(e["multipliers"]) != 48:
+            raise ValueError(f"{e['name']}: {len(e['multipliers'])} multipliers")
+
+    name_map, exceptions = build_name_map(roster, espn_names or [],
+                                          manual_aliases=MANUAL_ALIASES)
+
+    _write(os.path.join(out_dir, "roster.json"),
+           {"_meta": _meta(xlsx_path, now), "groups": roster})
+    _write(os.path.join(out_dir, "entrants.json"),
+           {"_meta": _meta(xlsx_path, now), "entrants": entrants})
+    _write(os.path.join(out_dir, "name_map.json"),
+           {"_meta": _meta(xlsx_path, now), "map": name_map})
+    if exceptions:
+        _write(os.path.join(out_dir, "name_map_exceptions.json"),
+               {"_meta": _meta(xlsx_path, now), "exceptions": exceptions})
+
+    return {"roster": len(flat), "entrants": len(entrants),
+            "name_map": len(name_map), "exceptions": exceptions}
