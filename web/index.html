@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>World Cup Tipping 2026</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="appbar">
+    <div class="appbar__brand">
+      <span class="logo" aria-hidden="true">★</span>
+      <span class="appbar__title">World Cup Tipping <span class="yr">’26</span></span>
+    </div>
+    <div class="appbar__meta" id="updated" hidden></div>
+  </header>
+
+  <main id="app">
+    <!-- Standings view -->
+    <section class="view" id="view-standings">
+      <div class="summary" id="summary"></div>
+
+      <div class="search">
+        <span class="search__icon" aria-hidden="true">⌕</span>
+        <input id="find" class="search__input" type="search" inputmode="search"
+               autocomplete="off" placeholder="Find your name…" aria-label="Find your name" />
+        <button id="find-clear" class="search__clear" hidden aria-label="Clear search">×</button>
+      </div>
+      <p class="search__result" id="find-result" hidden></p>
+
+      <ol class="board" id="board"></ol>
+    </section>
+
+    <!-- Fixtures view -->
+    <section class="view" id="view-fixtures" hidden>
+      <div id="fixtures"></div>
+    </section>
+
+    <!-- Rules view -->
+    <section class="view" id="view-rules" hidden>
+      <div id="rules"></div>
+    </section>
+
+    <p class="loading" id="loading">Loading standings…</p>
+  </main>
+
+  <nav class="tabbar" role="tablist" aria-label="Sections">
+    <button class="tab is-active" data-view="standings" role="tab" aria-selected="true">
+      <span class="tab__icon">🏆</span><span class="tab__label">Standings</span>
+    </button>
+    <button class="tab" data-view="fixtures" role="tab" aria-selected="false">
+      <span class="tab__icon">⚽</span><span class="tab__label">Fixtures</span>
+    </button>
+    <button class="tab" data-view="rules" role="tab" aria-selected="false">
+      <span class="tab__icon">📋</span><span class="tab__label">Rules</span>
+    </button>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

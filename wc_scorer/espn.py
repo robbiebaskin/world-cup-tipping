@@ -118,6 +118,7 @@ def parse(raw: dict, name_map: dict) -> list:
                     cards[team]["red"] += 1
             matches.append({
                 "stage": stage,
+                "date": event.get("date"),
                 "team_a": names[0], "team_b": names[1],
                 "ga": goals[0], "gb": goals[1],
                 "completed": completed,

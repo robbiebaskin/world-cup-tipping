@@ -3,4 +3,7 @@ __pycache__/
 data/cache/*.json
 out/*.csv
 out/*.md
+out/*.log
+web/data.json
+.playwright-cli/
 .DS_Store
