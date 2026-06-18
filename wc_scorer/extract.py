@@ -1,7 +1,11 @@
 # wc_scorer/extract.py
 """Extract committed JSON reference data from the tipping workbook."""
+import json
+import os
 import re
-from .xlsx_reader import cell, col_to_num
+import unicodedata
+
+from .xlsx_reader import cell, num_to_col, read_sheet
 
 
 def extract_roster(results_cells: dict) -> dict:
@@ -21,8 +25,6 @@ def extract_roster(results_cells: dict) -> dict:
             roster[current].append(a)
     return roster
 
-
-from .xlsx_reader import num_to_col
 
 _ROW_GROUPS = [["A", "B", "C", "D"], ["E", "F", "G", "H"], ["I", "J", "K", "L"]]
 
@@ -65,8 +67,6 @@ def extract_entrants(entries_cells: dict, roster: dict) -> list:
     return entrants
 
 
-import unicodedata
-
 # ESPN names for not-yet-played knockout fixtures, not real teams.
 _PLACEHOLDER_RE = re.compile(
     r"\bplace\b|\bwinner|\brunner|\bloser|\bgroup\s+[a-l]\b|\bmatch\s*\d+|\b\d+(st|nd|rd|th)\b",
@@ -97,10 +97,6 @@ def build_name_map(roster: dict, espn_names, manual_aliases: dict = None):
             exceptions.append(name)
     return name_map, exceptions
 
-
-import json
-import os
-from .xlsx_reader import read_sheet
 
 MANUAL_ALIASES = {
     "South Korea": "Korea Rep.",

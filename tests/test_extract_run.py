@@ -9,9 +9,12 @@ class TestExtractRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             summary = extract("World Cup Tipping 2026.xlsx", out_dir=d,
                               espn_names=names, now="2026-06-18T00:00:00")
-            roster = json.load(open(os.path.join(d, "roster.json")))
-            entrants = json.load(open(os.path.join(d, "entrants.json")))
-            name_map = json.load(open(os.path.join(d, "name_map.json")))
+            with open(os.path.join(d, "roster.json")) as fh:
+                roster = json.load(fh)
+            with open(os.path.join(d, "entrants.json")) as fh:
+                entrants = json.load(fh)
+            with open(os.path.join(d, "name_map.json")) as fh:
+                name_map = json.load(fh)
             self.assertEqual(len([t for g in roster["groups"].values() for t in g]), 48)
             self.assertEqual(len(entrants["entrants"]), 63)
             self.assertEqual(name_map["map"]["South Korea"], "Korea Rep.")
