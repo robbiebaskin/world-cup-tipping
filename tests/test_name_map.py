@@ -33,5 +33,16 @@ class TestNameMap(unittest.TestCase):
                                               manual_aliases={})
         self.assertIn("South Korea", exceptions)
 
+    def test_real_feed_fully_resolved(self):
+        from wc_scorer import espn
+        aliases = {"South Korea": "Korea Rep.", "Türkiye": "Turkey",
+                   "United States": "USA", "Congo DR": "Congo",
+                   "Bosnia-Herzegovina": "Bosnia", "Uzbekistan": "Uzebekistan"}
+        names = espn.team_names(espn.fetch(cache_dir="data/cache"))
+        name_map, exceptions = build_name_map(self.roster, names, manual_aliases=aliases)
+        self.assertEqual(exceptions, [], f"unfiltered/unmapped feed names: {exceptions}")
+        flat = [t for ts in self.roster.values() for t in ts]
+        self.assertTrue(set(flat) <= set(name_map.values()))
+
 if __name__ == "__main__":
     unittest.main()

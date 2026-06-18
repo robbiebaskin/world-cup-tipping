@@ -68,8 +68,10 @@ def extract_entrants(entries_cells: dict, roster: dict) -> list:
 import unicodedata
 
 # ESPN names for not-yet-played knockout fixtures, not real teams.
-_PLACEHOLDER_RE = re.compile(r"(\d+(st|nd|rd|th)?\s+place|winner|runner|loser|"
-                             r"group [a-l]\b.*place|match \d+)", re.I)
+_PLACEHOLDER_RE = re.compile(
+    r"\bplace\b|\bwinner|\brunner|\bloser|\bgroup\s+[a-l]\b|\bmatch\s*\d+|\b\d+(st|nd|rd|th)\b",
+    re.I,
+)
 
 
 def norm(s: str) -> str:
