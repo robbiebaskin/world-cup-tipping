@@ -24,7 +24,7 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
     overrides = overrides or {}
     teams_all = [t for ts in roster.values() for t in ts]
     stats = {t: empty_stats() for t in teams_all}
-    table = {t: {"pts": 0, "gd": 0, "gf": 0} for t in teams_all}  # group standings
+    table = {t: {"pts": 0, "gd": 0, "gf": 0, "gp": 0} for t in teams_all}  # group standings
 
     for mt in matches:
         if not mt["completed"]:
@@ -57,6 +57,7 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
 
         # group standings (group stage only)
         if mt["stage"] == "group":
+            table[a]["gp"] += 1; table[b]["gp"] += 1
             table[a]["gf"] += ga; table[a]["gd"] += ga - gb
             table[b]["gf"] += gb; table[b]["gd"] += gb - ga
             if ga == gb:
@@ -71,17 +72,21 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
             for t in ts:
                 stats[t]["group_winner"] = 1 if t == forced[g] else 0
             continue
+        # Only decide a winner once the group is COMPLETE (every team has played
+        # all its group games). Mid-stage standings are not yet a group winner —
+        # the workbook awards nothing until the group finishes. tie -> warn, no award.
+        complete = all(table[t]["gp"] >= len(ts) - 1 for t in ts)
+        if not complete:
+            continue
         ranked = sorted(ts, key=lambda t: (table[t]["pts"], table[t]["gd"], table[t]["gf"]),
                         reverse=True)
         top, second = ranked[0], ranked[1]
         tie = (table[top]["pts"], table[top]["gd"], table[top]["gf"]) == \
               (table[second]["pts"], table[second]["gd"], table[second]["gf"])
-        # only award once the group has actually played; tie -> warn, no award
-        played = any(table[t]["pts"] or table[t]["gd"] or table[t]["gf"] for t in ts)
-        if played and not tie:
-            stats[top]["group_winner"] = 1
-        elif played and tie:
+        if tie:
             warnings.append(f"group {g}: tie for winner between {top} and {second}")
+        else:
+            stats[top]["group_winner"] = 1
 
     for team, patch in overrides.get("patch", {}).items():
         if team in stats:

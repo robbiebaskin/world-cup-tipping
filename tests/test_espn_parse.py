@@ -21,6 +21,29 @@ class TestParse(unittest.TestCase):
         for m in self.matches:
             self.assertNotIn("South Korea", (m["team_a"], m["team_b"]))
 
+    def test_scored_penalty_not_counted_as_red_card(self):
+        # "Penalty - Scored" contains the substring "red" (sco-RED); it must NOT
+        # be counted as a red card. Real cards still count.
+        raw = {"events": [{
+            "season": {"slug": "group-stage"},
+            "competitions": [{
+                "status": {"type": {"completed": True}},
+                "competitors": [
+                    {"team": {"id": "1", "displayName": "Germany"}, "score": "2"},
+                    {"team": {"id": "2", "displayName": "Curacao"}, "score": "0"},
+                ],
+                "details": [
+                    {"type": {"text": "Penalty - Scored"}, "team": {"id": "1"}},
+                    {"type": {"text": "Yellow Card"}, "team": {"id": "1"}},
+                    {"type": {"text": "Red Card"}, "team": {"id": "2"}},
+                ],
+            }],
+        }]}
+        cards = espn.parse(raw, {"Germany": "Germany", "Curacao": "Curacao"})[0]["cards"]
+        self.assertEqual(cards["Germany"]["red"], 0)     # scored penalty is not a red
+        self.assertEqual(cards["Germany"]["yellow"], 1)
+        self.assertEqual(cards["Curacao"]["red"], 1)     # a real red still counts
+
     def test_stage_helper(self):
         self.assertEqual(espn.stage_of({"season": {"slug": "group-stage"}}), "group")
         self.assertEqual(espn.stage_of({"season": {"slug": "round-of-32"}}), "r32")

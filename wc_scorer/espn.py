@@ -105,6 +105,10 @@ def parse(raw: dict, name_map: dict) -> list:
             cards = {n: {"yellow": 0, "red": 0} for n in names}
             for d in comp.get("details", []) or []:
                 ttext = (d.get("type", {}).get("text") or "").lower()
+                if "card" not in ttext:
+                    # Skip non-card details. Critically, "Penalty - Scored" contains
+                    # the substring "red" (sco-RED) and must not become a red card.
+                    continue
                 tid = d.get("team", {}).get("id")
                 team = id_to_team.get(tid)
                 if not team:

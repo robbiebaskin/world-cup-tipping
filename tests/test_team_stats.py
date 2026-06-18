@@ -26,10 +26,25 @@ class TestTeamStats(unittest.TestCase):
         self.assertEqual(s["South Africa"]["loss"], 1)
         self.assertEqual(s["South Africa"]["red"], 1)
 
-    def test_group_winner(self):
+    def test_no_group_winner_until_group_complete(self):
+        # one game each: group not decided -> no winner awarded yet (matches workbook)
         matches = [
             m("group", "Mexico", "South Africa", 3, 0),
             m("group", "Korea Rep.", "Czechia", 0, 0),
+        ]
+        s = team_stats(matches, ROSTER)
+        self.assertEqual(s["Mexico"]["group_winner"], 0)
+        self.assertEqual(s["_warnings"], [])  # no premature tie warnings either
+
+    def test_group_winner_when_group_complete(self):
+        # full round-robin of group A (each team plays 3); Mexico wins all
+        matches = [
+            m("group", "Mexico", "South Africa", 3, 0),
+            m("group", "Korea Rep.", "Czechia", 0, 0),
+            m("group", "Mexico", "Korea Rep.", 2, 0),
+            m("group", "Mexico", "Czechia", 1, 0),
+            m("group", "South Africa", "Korea Rep.", 1, 0),
+            m("group", "South Africa", "Czechia", 1, 0),
         ]
         s = team_stats(matches, ROSTER)
         self.assertEqual(s["Mexico"]["group_winner"], 1)
