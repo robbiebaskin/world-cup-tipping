@@ -24,9 +24,9 @@ class TestReadSheet(unittest.TestCase):
         self.assertEqual(cell(self.results, "A", 4), "South Africa")
 
     def test_points_formula_captured(self):
-        f = self.results["O3"]["formula"]
+        f = self.results["P3"]["formula"]
         self.assertIn("(B3*5)", f)
-        self.assertIn("(N3*30)", f)
+        self.assertIn("(O3*30)", f)
 
 if __name__ == "__main__":
     unittest.main()

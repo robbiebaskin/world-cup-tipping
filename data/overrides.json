@@ -1,4 +1,9 @@
 {
   "force_group_winner": {},
-  "patch": {}
+  "patch": {},
+  "adjust": {
+    "Morocco": {"yellow": 1},
+    "Haiti": {"yellow": -1},
+    "Turkey": {"yellow": -1}
+  }
 }

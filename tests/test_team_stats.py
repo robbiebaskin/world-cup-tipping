@@ -65,32 +65,52 @@ class TestTeamStats(unittest.TestCase):
         s = team_stats(matches, roster)
         self.assertEqual(s["G5T0"]["group_winner"], 1)     # winner of each group
         self.assertEqual(s["G5T1"]["group_winner"], 0)
-        self.assertEqual(s["G5T0"]["qualify"], 1)          # top two of each group qualify
-        self.assertEqual(s["G5T1"]["qualify"], 1)
+        self.assertEqual(s["G5T0"]["qualify"], 0)          # winner excluded from qualify (Exc GW)
+        self.assertEqual(s["G5T1"]["qualify"], 1)          # runner-up qualifies
         self.assertEqual(s["G5T3"]["qualify"], 0)          # 4th never qualifies
         # 8 best thirds qualify: highest margins (i=4..11) in, i=0..3 out
         self.assertEqual(s["G11T2"]["qualify"], 1)
         self.assertEqual(s["G0T2"]["qualify"], 0)
         self.assertEqual(s["_warnings"], [])
 
+    def test_group_winner_excluded_from_qualify_bonus(self):
+        # Workbook col J is "Round of 32 Qual (2) (Exc GW)" — group winners get the
+        # +5 group-winner bonus, NOT the +2 qualify bonus. Only non-winning qualifiers
+        # (runners-up, best thirds) get qualify.
+        roster = {chr(65 + i): [f"G{i}T{j}" for j in range(4)] for i in range(12)}
+        matches = []
+        for i in range(12):
+            t0, t1, t2, t3 = roster[chr(65 + i)]
+            matches += [
+                m("group", t0, t1, 1, 0), m("group", t0, t2, 1, 0), m("group", t0, t3, 1, 0),
+                m("group", t1, t2, 1, 0), m("group", t1, t3, 1, 0),
+                m("group", t2, t3, 1 + i, 0),
+            ]
+        s = team_stats(matches, roster)
+        self.assertEqual(s["G5T0"]["group_winner"], 1)     # group winner
+        self.assertEqual(s["G5T0"]["qualify"], 0)          # ...excluded from qualify (Exc GW)
+        self.assertEqual(s["G5T1"]["qualify"], 1)          # runner-up still qualifies
+
     def test_knockout_run_accumulates_milestones(self):
         roster = {"A": ["X", "Y", "Z", "W"], "B": ["V", "U", "P", "Q"]}
         matches = [
             m("r32", "X", "Y", 1, 0),                                  # X & Y qualify
-            m("r16", "X", "Z", 2, 1),                                  # advance; no r16 milestone
+            m("r16", "X", "Z", 2, 1),                                  # X & Z reach R16
             m("qf", "X", "W", 1, 0),                                   # X & W make QF
             m("sf", "X", "V", 1, 1, penalties=True, winner="X"),       # draw both; X advances
             m("final", "X", "U", 2, 0),                                # X & U make final; X champion
         ]
         s = team_stats(matches, roster)
         x = s["X"]
-        self.assertEqual((x["qualify"], x["qf"], x["sf"], x["final"], x["winner"]), (1, 1, 1, 1, 1))
+        self.assertEqual((x["qualify"], x["r16"], x["qf"], x["sf"], x["final"], x["winner"]),
+                         (1, 1, 1, 1, 1, 1))
         self.assertEqual(x["win"], 4)            # R32, R16, QF, Final (SF was a shootout = draw)
         self.assertEqual(x["draw"], 1)           # SF shootout
         self.assertEqual(s["Y"]["qualify"], 1)   # R32 loser still qualified
+        self.assertEqual(s["Z"]["r16"], 1)       # reached R16...
+        self.assertEqual(s["Z"]["qf"], 0)        # ...but lost there, never made QF
         self.assertEqual(s["U"]["final"], 1)
         self.assertEqual(s["U"]["winner"], 0)    # runner-up is not champion
-        self.assertEqual(s["Z"]["qf"], 0)        # lost in R16, never made QF
 
     def test_unclassified_completed_match_warns(self):
         s = team_stats([m("other", "Mexico", "Canada", 1, 0)], ROSTER)
@@ -109,6 +129,20 @@ class TestTeamStats(unittest.TestCase):
         s = team_stats(matches, ROSTER, overrides={"force_group_winner": {"A": "Korea Rep."}})
         self.assertEqual(s["Korea Rep."]["group_winner"], 1)
         self.assertEqual(s["Mexico"]["group_winner"], 0)
+
+    def test_adjust_override_applies_delta(self):
+        # `adjust` corrects feed glitches additively (a delta), so the correction survives
+        # later matches — unlike `patch`, which sets an absolute value.
+        matches = [
+            m("group", "Mexico", "South Africa", 2, 0,
+              cards={"Mexico": {"yellow": 1, "red": 0}, "South Africa": {"yellow": 0, "red": 0}}),
+        ]
+        s = team_stats(matches, ROSTER,
+                       overrides={"adjust": {"Mexico": {"yellow": 1}, "South Africa": {"yellow": -0}}})
+        self.assertEqual(s["Mexico"]["yellow"], 2)   # derived 1 + delta 1
+        # a negative delta subtracts from the derived value
+        s2 = team_stats(matches, ROSTER, overrides={"adjust": {"Mexico": {"yellow": -1}}})
+        self.assertEqual(s2["Mexico"]["yellow"], 0)
 
 if __name__ == "__main__":
     unittest.main()

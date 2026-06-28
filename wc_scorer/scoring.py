@@ -2,8 +2,8 @@
 """Layer 1 (team performance points) and Layer 2 (per-entrant scoring)."""
 
 _STAT_KEYS = ["win", "draw", "loss", "gf", "ga", "yellow", "red",
-              "group_winner", "qualify", "qf", "sf", "final", "winner"]
-_STAGE_MILESTONE = {"r32": "qualify", "qf": "qf", "sf": "sf", "final": "final"}
+              "group_winner", "qualify", "r16", "qf", "sf", "final", "winner"]
+_STAGE_MILESTONE = {"r32": "qualify", "r16": "r16", "qf": "qf", "sf": "sf", "final": "final"}
 
 
 def empty_stats() -> dict:
@@ -100,9 +100,24 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
         if len(thirds) > 8 and key(thirds[7]) == key(thirds[8]):
             warnings.append(f"best-third qualify cutoff tie (verify): {thirds[7]} vs {thirds[8]}")
 
+    # The workbook's "Round of 32 Qual (2)" bonus EXCLUDES group winners (col J header
+    # "(Exc GW)"): a group winner earns the +5 group-winner bonus instead, never the +2
+    # qualify bonus. Enforce after winners are finalized — covers both the top-two qualify
+    # path above and the R32-appearance qualify path in the match loop.
+    for t in teams_all:
+        if stats[t]["group_winner"]:
+            stats[t]["qualify"] = 0
+
     for team, patch in overrides.get("patch", {}).items():
         if team in stats:
             stats[team].update(patch)
+
+    # `adjust` applies additive deltas (e.g. correcting an ESPN card miscount against the
+    # authoritative workbook). Unlike `patch`'s absolute set, a delta survives later matches.
+    for team, delta in overrides.get("adjust", {}).items():
+        if team in stats:
+            for k, v in delta.items():
+                stats[team][k] = stats[team].get(k, 0) + v
 
     stats["_warnings"] = warnings
     return stats
@@ -110,7 +125,7 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
 
 WEIGHTS = {
     "win": 5, "draw": 3, "loss": 0, "gf": 2, "ga": -1, "yellow": -1, "red": -5,
-    "group_winner": 5, "qualify": 2, "qf": 10, "sf": 15, "final": 20, "winner": 30,
+    "group_winner": 5, "qualify": 2, "r16": 5, "qf": 10, "sf": 15, "final": 20, "winner": 30,
 }
 
 

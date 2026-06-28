@@ -4,14 +4,14 @@ import unittest
 from wc_scorer.xlsx_reader import read_sheet
 from wc_scorer.scoring import WEIGHTS, team_points, empty_stats
 
-# Column letters in Results!O formula -> our stat keys.
+# Column letters in Results!P formula -> our stat keys.
 COL_TO_STAT = {"B": "win", "C": "draw", "D": "loss", "E": "gf", "F": "ga",
                "G": "yellow", "H": "red", "I": "group_winner", "J": "qualify",
-               "K": "qf", "L": "sf", "M": "final", "N": "winner"}
+               "K": "r16", "L": "qf", "M": "sf", "N": "final", "O": "winner"}
 
 class TestGoldenPoints(unittest.TestCase):
     def test_weights_match_workbook_formula(self):
-        formula = read_sheet("World Cup Tipping 2026.xlsx", "Results")["O3"]["formula"]
+        formula = read_sheet("World Cup Tipping 2026.xlsx", "Results")["P3"]["formula"]
         # e.g. (B3*5)+(C3*3)+...+(F3*-1)+...
         found = {}
         for col, coef in re.findall(r"\(([A-Z])3\*(-?\d+)\)", formula):
