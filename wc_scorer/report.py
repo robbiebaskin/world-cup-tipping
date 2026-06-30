@@ -3,7 +3,7 @@ import csv
 import os
 
 _BREAKDOWN_COLS = ["win", "draw", "loss", "gf", "ga", "yellow", "red",
-                   "group_winner", "qualify", "qf", "sf", "final", "winner"]
+                   "group_winner", "qualify", "r16", "qf", "sf", "final", "winner"]
 
 
 def ladder(results: list) -> list:

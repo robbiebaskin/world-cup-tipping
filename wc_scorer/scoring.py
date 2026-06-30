@@ -4,6 +4,9 @@
 _STAT_KEYS = ["win", "draw", "loss", "gf", "ga", "yellow", "red",
               "group_winner", "qualify", "r16", "qf", "sf", "final", "winner"]
 _STAGE_MILESTONE = {"r32": "qualify", "r16": "r16", "qf": "qf", "sf": "sf", "final": "final"}
+# Winning a knockout match means you have REACHED the next round — credit that
+# round's milestone to the winner immediately (the final's winner is handled below).
+_STAGE_ADVANCE = {"r32": "r16", "r16": "qf", "qf": "sf", "sf": "final"}
 
 
 def empty_stats() -> dict:
@@ -55,6 +58,15 @@ def team_stats(matches: list, roster: dict, overrides: dict = None) -> dict:
         ms = _STAGE_MILESTONE.get(mt["stage"])
         if ms:
             stats[a][ms] = 1; stats[b][ms] = 1
+        # Advancing credits the NEXT round's milestone to the match winner (or shootout
+        # winner) right away — a team that wins its R32 game has reached the R16 and earns
+        # the +5 now, rather than waiting to appear in (and the feed to schedule) the R16
+        # fixture. Appearance crediting above still fires later as ground-truth reinforcement.
+        adv = _STAGE_ADVANCE.get(mt["stage"])
+        if adv:
+            advancer = mt["shootout_winner"] or win
+            if advancer:
+                stats[advancer][adv] = 1
         if mt["stage"] == "final":
             champ = mt["shootout_winner"] or win
             if champ:

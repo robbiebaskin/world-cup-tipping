@@ -7,13 +7,13 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const METRICS = [
   ["win", "Win"], ["draw", "Draw"], ["gf", "GF"], ["ga", "GA"],
   ["yellow", "YC"], ["red", "RC"], ["group_winner", "Grp win"],
-  ["qualify", "Qual"], ["qf", "QF"], ["sf", "SF"], ["final", "Final"],
+  ["qualify", "Qual"], ["r16", "R16"], ["qf", "QF"], ["sf", "SF"], ["final", "Final"],
   ["winner", "Champion"],
 ];
 const WEIGHT_LABELS = {
   win: "Win", draw: "Draw", loss: "Loss", gf: "Goal for", ga: "Goal against",
   yellow: "Yellow card", red: "Red card", group_winner: "Group winner",
-  qualify: "Qualify (R32)", qf: "Quarter-final", sf: "Semi-final",
+  qualify: "Qualify (R32)", r16: "Round of 16", qf: "Quarter-final", sf: "Semi-final",
   final: "Reach final", winner: "Champion",
 };
 const MEDALS = { 1: "🥇", 2: "🥈", 3: "🥉" };

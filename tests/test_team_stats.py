@@ -112,6 +112,26 @@ class TestTeamStats(unittest.TestCase):
         self.assertEqual(s["U"]["final"], 1)
         self.assertEqual(s["U"]["winner"], 0)    # runner-up is not champion
 
+    def test_knockout_win_credits_next_round_milestone_immediately(self):
+        # Winning an R32 match means you have REACHED the Round of 16 — credit the
+        # r16 milestone now, without waiting to appear in (or for the feed to schedule)
+        # the R16 fixture. The loser qualified (R32 appearance) but did not reach R16.
+        roster = {"A": ["X", "Y", "Z", "W"], "B": ["V", "U", "P", "Q"]}
+        s = team_stats([m("r32", "X", "Y", 1, 0)], roster)   # only one R32 game played
+        self.assertEqual(s["X"]["qualify"], 1)
+        self.assertEqual(s["Y"]["qualify"], 1)
+        self.assertEqual(s["X"]["r16"], 1)   # winner reached R16 immediately
+        self.assertEqual(s["Y"]["r16"], 0)   # loser did not advance
+        self.assertEqual(s["X"]["qf"], 0)    # ...but has not reached the QF yet
+
+    def test_knockout_shootout_winner_advances_to_next_round(self):
+        # A penalty shootout is a draw for both, but the shootout winner advances and
+        # earns the next round's milestone immediately.
+        roster = {"A": ["X", "Y", "Z", "W"], "B": ["V", "U", "P", "Q"]}
+        s = team_stats([m("r32", "X", "Y", 1, 1, penalties=True, winner="Y")], roster)
+        self.assertEqual(s["Y"]["r16"], 1)   # shootout winner reached R16
+        self.assertEqual(s["X"]["r16"], 0)   # shootout loser did not
+
     def test_unclassified_completed_match_warns(self):
         s = team_stats([m("other", "Mexico", "Canada", 1, 0)], ROSTER)
         self.assertTrue(any("Mexico" in w and "Canada" in w for w in s["_warnings"]))
