@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from wc_scorer import webexport
+from wc_scorer import scoring, webexport
 
 # Al (90) leads; Beth and Cy tie at 50 -> ranked by name (same key as report.ladder).
 RESULTS = [
@@ -28,11 +28,12 @@ MATCHES = [
      "completed": False, "penalties": False, "shootout_winner": None},
 ]
 NOW = "2026-06-18T00:00:00+00:00"
+TEAM_STATS = {"Brazil": {**scoring.empty_stats(), "win": 2, "gf": 5, "ga": 1, "r16": 1}}
 
 
 def build():
     return webexport.build_payload(RESULTS, ["group A tie"], TEAM_GROUP, ROSTER,
-                                   MATCHES, WEIGHTS, NOW)
+                                   TEAM_STATS, MATCHES, WEIGHTS, NOW)
 
 
 class TestBuildPayload(unittest.TestCase):
@@ -66,8 +67,19 @@ class TestBuildPayload(unittest.TestCase):
         matches = MATCHES + [{"stage": "qf", "team_a": "Spain", "team_b": "Brazil",
                               "ga": 1, "gb": 0, "completed": False,
                               "penalties": False, "shootout_winner": None}]
-        p = webexport.build_payload(RESULTS, [], TEAM_GROUP, ROSTER, matches, WEIGHTS, NOW)
+        p = webexport.build_payload(RESULTS, [], TEAM_GROUP, ROSTER, TEAM_STATS, matches, WEIGHTS, NOW)
         self.assertEqual(p["tournament"]["stage"], "Quarter-finals")
+
+    def test_teams_block_has_intrinsic_breakdown(self):
+        by = {t["name"]: t for t in build()["teams"]}
+        self.assertEqual(len(by), 8)                       # 2 groups x 4
+        self.assertEqual(by["Brazil"]["group"], "C")
+        self.assertEqual(by["Brazil"]["points"],
+                         scoring.team_breakdown(TEAM_STATS["Brazil"])["points"])
+        self.assertEqual(by["Brazil"]["components"], {"win": 10, "gf": 10, "ga": -1, "r16": 5})
+        # a team with no stats -> zero points, empty components (still listed)
+        self.assertEqual(by["Iraq"]["points"], 0)
+        self.assertEqual(by["Iraq"]["components"], {})
 
 
 class TestWriteJson(unittest.TestCase):

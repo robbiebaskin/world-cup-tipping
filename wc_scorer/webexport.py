@@ -7,7 +7,7 @@ multiplier-applied and signed) into a single JSON-serializable payload.
 import json
 import os
 
-from . import report
+from . import report, scoring
 
 # 72 group + 32 knockout (R32 16 + R16 8 + QF 4 + SF 2 + 3rd 1 + final 1).
 MATCHES_TOTAL = 104
@@ -35,7 +35,7 @@ def _stage_label(matches: list) -> str:
 
 
 def build_payload(results: list, warnings: list, team_group: dict, roster: dict,
-                  matches: list, weights: dict, now: str) -> dict:
+                  team_stats: dict, matches: list, weights: dict, now: str) -> dict:
     entrants = []
     for rank, r in enumerate(report.ladder(results), 1):
         entrants.append({
@@ -45,6 +45,14 @@ def build_payload(results: list, warnings: list, team_group: dict, roster: dict,
             "total": r["total"],
             "by_country": r["by_country"],
         })
+    # Per-team intrinsic (multiplier-1) breakdown for the Countries view. The per-team
+    # backer list is derived client-side from `entrants` (already live-rank ordered).
+    teams = []
+    for g, ts in roster.items():
+        for t in ts:
+            bd = scoring.team_breakdown(team_stats.get(t, {}))
+            teams.append({"name": t, "group": g,
+                          "points": bd["points"], "components": bd["components"]})
     return {
         "generated_at": now,
         "tournament": {
@@ -57,6 +65,7 @@ def build_payload(results: list, warnings: list, team_group: dict, roster: dict,
         "team_group": team_group,
         "warnings": warnings,
         "matches": matches,
+        "teams": teams,
         "entrants": entrants,
     }
 

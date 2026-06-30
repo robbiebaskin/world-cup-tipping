@@ -66,6 +66,7 @@ async function boot() {
   renderSummary();
   renderBoard();
   renderFixtures();
+  renderCountries();
   renderRules();
   wireSearch();
   wireTabs();
@@ -306,6 +307,76 @@ function fixtureCard(m) {
     </div>`;
 }
 
+/* ---------- Countries ---------- */
+function renderCountries() {
+  const wrap = $("#countries");
+  // Backers per team, in live-rank order (DATA.entrants is already rank-sorted).
+  const backers = {};
+  for (const e of DATA.entrants) {
+    for (const [team, info] of Object.entries(e.by_country)) {
+      (backers[team] ||= []).push(
+        { rank: e.rank, name: e.name, mult: info.multiplier, points: info.points });
+    }
+  }
+  const teams = [...DATA.teams].sort((a, b) => a.name.localeCompare(b.name));
+
+  wrap.innerHTML = `
+    <div class="sec-head"><span class="ico">🌍</span>
+      <div><h1>Countries</h1><div class="sub">${teams.length} teams · tap one to see who backed it</div></div>
+    </div>
+    <ol class="tlist"></ol>`;
+  const list = wrap.querySelector(".tlist");
+
+  for (const t of teams) {
+    const li = document.createElement("li");
+    li.className = "tcard";
+    li.innerHTML = `
+      <button class="tcard__head" aria-expanded="false">
+        <span class="tcard__fl">${flag(t.name)}</span>
+        <span class="tcard__main">
+          <span class="ctry__name">${esc(t.name)}</span>
+          <span class="grp">${t.group}</span>
+        </span>
+        <span class="ctry__pts num${t.points === 0 ? " zero" : ""}">${signed(t.points)}</span>
+        <span class="chev">▾</span>
+      </button>`;
+    // Attribution pills are always shown — the "minimised" per-team breakdown.
+    li.appendChild(renderPills(t.components));
+    li.querySelector(".tcard__head")
+      .addEventListener("click", () => toggleTeam(li, backers[t.name] || []));
+    list.appendChild(li);
+  }
+}
+
+function toggleTeam(li, backers) {
+  const open = li.classList.toggle("is-open");
+  li.querySelector(".tcard__head").setAttribute("aria-expanded", open);
+  let cb = li.querySelector(".cb");
+  if (open && !cb) {
+    cb = document.createElement("ol");
+    cb.className = "cb";
+    cb.innerHTML = backers.length ? backers.map(backerRow).join("")
+      : `<li class="cb__empty">No one backed this team.</li>`;
+    li.appendChild(cb);
+  } else if (cb) {
+    cb.hidden = !open;
+  }
+}
+
+function backerRow(b) {
+  const isStar = b.mult === 5;
+  const multCls = isStar ? "star" : "m" + b.mult;
+  const rankCell = MEDALS[b.rank]
+    ? `<span class="rank medal">${MEDALS[b.rank]}</span>`
+    : `<span class="rank num">${b.rank}</span>`;
+  return `<li class="cb__row">
+      ${rankCell}
+      <span class="cb__name">${esc(b.name)}</span>
+      <span class="mult ${multCls}">${isStar ? "★×5" : "×" + b.mult}</span>
+      <span class="cb__pts num${b.points === 0 ? " zero" : ""}">${signed(b.points)}</span>
+    </li>`;
+}
+
 /* ---------- Rules ---------- */
 function renderRules() {
   const w = DATA.weights;
@@ -347,6 +418,7 @@ function wireTabs() {
   const views = {
     standings: $("#view-standings"),
     fixtures: $("#view-fixtures"),
+    countries: $("#view-countries"),
     rules: $("#view-rules"),
   };
   tabs.forEach((tab) => tab.addEventListener("click", () => {

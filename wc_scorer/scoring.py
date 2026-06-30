@@ -145,6 +145,13 @@ def team_points(stats: dict) -> int:
     return sum(WEIGHTS[k] * stats.get(k, 0) for k in WEIGHTS)
 
 
+def team_breakdown(stats: dict) -> dict:
+    """A team's own (multiplier-1) points + per-stat components — same component shape
+    as score_entrant's by_country entries, for the web Countries view."""
+    components = {k: v for k in WEIGHTS if (v := WEIGHTS[k] * stats.get(k, 0))}
+    return {"points": team_points(stats), "components": components}
+
+
 def score_entrant(entrant: dict, stats_map: dict) -> dict:
     by_country = {}
     total = 0

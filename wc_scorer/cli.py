@@ -9,7 +9,7 @@ from . import espn, extract, rankings, report, schedule, scoring, teams, webexpo
 
 
 def _pipeline(ref_dir, dates, refresh, cache_dir, overrides_path):
-    """Run the full scoring pipeline. Returns (results, warnings, roster, matches)."""
+    """Run the full scoring pipeline. Returns (results, warnings, roster, matches, stats)."""
     roster = teams.load_roster(ref_dir)
     name_map = teams.load_name_map(ref_dir)
     entrants = rankings.load_entrants(ref_dir)
@@ -22,21 +22,21 @@ def _pipeline(ref_dir, dates, refresh, cache_dir, overrides_path):
     stats = scoring.team_stats(matches, roster, overrides=overrides)
     warnings = stats.pop("_warnings", [])
     results = scoring.score_all(entrants, stats)
-    return results, warnings, roster, matches
+    return results, warnings, roster, matches, stats
 
 
 def compute(ref_dir, dates, refresh, cache_dir, overrides_path):
-    results, warnings, _, _ = _pipeline(ref_dir, dates, refresh, cache_dir, overrides_path)
+    results, warnings, _, _, _ = _pipeline(ref_dir, dates, refresh, cache_dir, overrides_path)
     return results, warnings
 
 
 def _export(ref_dir, dates, refresh, cache_dir, overrides_path, out_path, now=None):
     """Score and write the web UI's JSON payload. Returns warnings."""
-    results, warnings, roster, matches = _pipeline(ref_dir, dates, refresh, cache_dir,
-                                                   overrides_path)
+    results, warnings, roster, matches, stats = _pipeline(ref_dir, dates, refresh, cache_dir,
+                                                          overrides_path)
     now = now or datetime.now(timezone.utc).isoformat()
     payload = webexport.build_payload(results, warnings, teams.team_group(roster),
-                                      roster, matches, scoring.WEIGHTS, now)
+                                      roster, stats, matches, scoring.WEIGHTS, now)
     webexport.write_json(payload, out_path)
     return payload, warnings
 
